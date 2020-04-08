@@ -42,8 +42,16 @@ function decodeEntities(encodedString) {
  */
 
 function getGNews(topic, language, region, callback) {
-    let rssURL = 'https://news.google.com/rss/topics/' + topic + '?hl=' + language + '&gl=' + region
-    let i = 0;
+    let rssURL = 'https://news.google.com/rss/topics/' + topic + '?hl=' + language + '&gl=' + region;
+
+    parseRSSvia(rssURL, callback)
+}
+
+function getGNewsVia(url, callback) {
+    parseRSSvia(url, callback)
+}
+
+function parseRSSvia (rssURL, callback) {
     (async () => {
 
         let feed = await parser.parseURL(rssURL);
@@ -97,46 +105,13 @@ function getGNews(topic, language, region, callback) {
 }
 
 router.get('/gnews', (req, res) => {
+    const language = req.query.lang;
+    const region = req.query.reg;
+    let rssURL = 'https://news.google.com/news/rss' + '?hl=' + language + '&gl=' + region;
 
-    (async () => {
-
-        let feed = await parser.parseURL('https://news.google.com/news/rss?hl=ru&gl=RU&ceid=RU-ru');
-        console.log(feed.title);
-
-        var news = []
-        feed.items.forEach(item => {
-            let headline = {
-                'title' :item.title,
-                'url' : item.link,
-                'pubDate' : item.pubDate,
-                'isoDate' : item.isoDate,
-                'source' : item.source,
-            };
-            var root = HTMLParser.parse(decodeEntities(item.content));
-            let list = root.querySelectorAll('li');
-
-            var BreakException = {};
-            let relatedArticles = [];
-            try {
-                list.forEach(listItem => {
-                    let head = listItem.querySelector('a');
-                    let title = head.rawText;
-                    let url = head.getAttribute("href");
-                    let sourceItem = listItem.querySelector('font');
-                    if (sourceItem == null) {
-                        throw BreakException;
-                    }
-                    let source = sourceItem.rawText;
-                    let article = {'title': title, 'url': url, 'source': source};
-                    relatedArticles.push(article);
-                });
-            } catch (e) {
-                if (e !== BreakException) throw e;
-            }
-            news.push({'headline': headline, 'related' : relatedArticles});
-        });
+    getGNewsVia(rssURL, function (news) {
         res.status(200).json(news)
-    })();
+    })
 });
 
 router.get('/gnews/covid', (req, res) => {
